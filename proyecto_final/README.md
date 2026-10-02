@@ -17,7 +17,6 @@ cp .env.example .env.local
 npm run dev
 ```
 
-En `.env.local` va `VITE_API_URL`. Sin esa variable no hay chat ni RAG. El backend es Python en Lambda (`requirements.txt`). Corpus: `data/README.md`.
+En `.env.local` va `VITE_API_URL` (está en el reporte; no la pongas en git). Sin esa variable no hay chat ni RAG. El backend es Python en Lambda (`requirements.txt`). Corpus: `data/README.md`.
 
-Las rutas del API (equivalente a `/docs` de FastAPI): https://j9zrekl9g4.execute-api.us-east-1.amazonaws.com/docs  
-Spec: https://j9zrekl9g4.execute-api.us-east-1.amazonaws.com/openapi.json
+Con el API desplegado, `GET /docs` lista las rutas (equivalente a `/docs` de FastAPI) y `GET /openapi.json` trae el spec. La URL de esas rutas va en el reporte, no aquí.
