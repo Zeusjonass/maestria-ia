@@ -2,7 +2,9 @@
 
 Prototipo de contratos de vivienda en Yucatán, con RAG en AWS. El ciclo es el del curso (incrustar, indexar, top-k, generar), montado con otras herramientas: React en lugar de Streamlit, Lambda en lugar de FastAPI, Knowledge Base / S3 Vectors en lugar de Chroma, embeddings de Bedrock en lugar de Google AI.
 
-Cómo está armado y por qué cada pieza: `docs/estructura-del-proyecto.md`
+**Reporte de entrega:** [`Proyecto Final - Sistema RAG.pdf`](./Proyecto%20Final%20-%20Sistema%20RAG.pdf)
+
+Estructura y equivalencias con el enunciado (mismo contenido, en markdown): `docs/estructura-del-proyecto.md`
 
 ## Local
 
