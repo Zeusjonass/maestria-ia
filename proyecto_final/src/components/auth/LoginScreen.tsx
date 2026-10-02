@@ -50,9 +50,6 @@ export function LoginScreen() {
           >
             Entrar
           </button>
-          <p className="mt-4 text-center text-xs text-ink-soft">
-            Acceso temporal: <span className="font-medium text-ink">admin / Admin2026!</span>
-          </p>
         </form>
       </div>
     </div>
