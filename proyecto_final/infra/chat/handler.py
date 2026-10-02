@@ -135,6 +135,12 @@ def response(status: int, payload: dict) -> dict:
     }
 
 
+def html_response(status: int, body: str) -> dict:
+    headers = dict(CORS)
+    headers["content-type"] = "text/html; charset=utf-8"
+    return {"statusCode": status, "headers": headers, "body": body}
+
+
 # ---------------------------------------------------------------------------
 # Bedrock: retrieval (RAG) + converse helpers
 # ---------------------------------------------------------------------------
@@ -1268,6 +1274,91 @@ def post_ask_in_thread(params: list[str], body: dict) -> dict:
 # Router
 # ---------------------------------------------------------------------------
 
+DOCS_HTML = """<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MiCasa API</title>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, sans-serif; max-width: 44rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.45; color: #1a1a1a; }
+    h1 { font-size: 1.4rem; }
+    h2 { font-size: 1.05rem; margin-top: 1.6rem; }
+    code, pre { font-family: ui-monospace, Menlo, monospace; font-size: 0.85rem; }
+    pre { background: #f4f1ea; padding: 0.8rem 1rem; overflow: auto; border-radius: 8px; }
+    table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+    th, td { border-bottom: 1px solid #ddd; text-align: left; padding: 0.4rem 0.35rem; vertical-align: top; }
+    .muted { color: #555; }
+  </style>
+</head>
+<body>
+  <h1>API de MiCasa</h1>
+  <p>Equivalente a <code>/docs</code> de FastAPI: las rutas del RAG y las de la app. La UI (React) solo habla con este HTTP; no llama a Bedrock.</p>
+  <p class="muted">Spec OpenAPI: <a href="/openapi.json">/openapi.json</a>.</p>
+  <h2>RAG (health / ingest / query)</h2>
+  <table>
+    <tr><th>Método</th><th>Ruta</th><th>Qué hace</th></tr>
+    <tr><td>GET</td><td><code>/health</code></td><td>Si el API está vivo: índice, modelo, k.</td></tr>
+    <tr><td>POST</td><td><code>/query</code></td><td>Pregunta → Retrieve top-5 → respuesta con citas y score. Body: <code>{"question":"..."}</code>.</td></tr>
+    <tr><td>POST</td><td><code>/ingest</code></td><td>No reindexa aquí. El ingest real es subir el PDF a S3 y Sync de la Knowledge Base.</td></tr>
+  </table>
+  <pre>curl -s "$ORIGIN/health"
+
+curl -s -X POST "$ORIGIN/query" \\
+  -H "Content-Type: application/json" \\
+  -d '{"question":"En un contrato de renta de casa habitación en Yucatán, ¿cuánto depósito o fianza se puede pedir?"}'</pre>
+  <p class="muted">El asistente legal usa el mismo RAG por <code>POST /projects/{id}/ask/{threadId}</code>.</p>
+  <h2>App (proyectos y contratos)</h2>
+  <table>
+    <tr><th>Método</th><th>Ruta</th><th>Qué hace</th></tr>
+    <tr><td>GET, POST</td><td><code>/projects</code></td><td>Listar o crear proyecto.</td></tr>
+    <tr><td>GET, POST</td><td><code>/projects/{id}/documents</code></td><td>Listar o crear borrador.</td></tr>
+    <tr><td>GET, PUT</td><td><code>/projects/{id}/documents/{docId}</code></td><td>Leer o aplicar el documento.</td></tr>
+    <tr><td>POST</td><td><code>/projects/{id}/documents/{docId}/turns</code></td><td>Turno del chat del contrato (RAG si hay cláusula nueva).</td></tr>
+    <tr><td>GET, POST</td><td><code>/projects/{id}/ask</code></td><td>Hilos del asistente.</td></tr>
+    <tr><td>GET, POST, DELETE</td><td><code>/projects/{id}/ask/{threadId}</code></td><td>Preguntar / listar / borrar hilo.</td></tr>
+  </table>
+  <script>
+    document.querySelectorAll("pre").forEach(function (el) {
+      el.textContent = el.textContent.replaceAll("$ORIGIN", location.origin);
+    });
+  </script>
+</body>
+</html>
+"""
+
+OPENAPI = {
+    "openapi": "3.0.3",
+    "info": {
+        "title": "MiCasa API",
+        "version": "1.0.0",
+        "description": "RAG sobre derecho civil de Yucatán. POST /query es Retrieve + generar.",
+    },
+    "paths": {
+        "/health": {"get": {"summary": "Salud del servicio", "responses": {"200": {"description": "ok, kbId, model, topK"}}}},
+        "/query": {
+            "post": {
+                "summary": "Pregunta RAG",
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {"question": {"type": "string"}},
+                                "required": ["question"],
+                            }
+                        }
+                    },
+                },
+                "responses": {"200": {"description": "answer, citations con score, retrieved, abstained"}},
+            }
+        },
+        "/ingest": {"post": {"summary": "Cómo se ingesta (S3 + Sync)", "responses": {"200": {"description": "Instrucciones; ingested=false"}}}},
+        "/docs": {"get": {"summary": "Documentación HTML de las rutas", "responses": {"200": {"description": "HTML"}}}},
+    },
+}
+
 ROUTES: list[tuple[re.Pattern, dict[str, object]]] = [
     (re.compile(r"^/health$"), {"GET": get_health}),
     (re.compile(r"^/query$"), {"POST": post_query}),
@@ -1299,6 +1390,11 @@ def handler(event, _context):
 
     path = http_ctx.get("path") or event.get("rawPath") or "/"
     path = path.rstrip("/") or "/"
+
+    if method == "GET" and path == "/docs":
+        return html_response(200, DOCS_HTML)
+    if method == "GET" and path == "/openapi.json":
+        return response(200, OPENAPI)
 
     body: dict = {}
     if method in ("POST", "PUT", "PATCH"):

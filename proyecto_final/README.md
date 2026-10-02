@@ -18,3 +18,6 @@ npm run dev
 ```
 
 En `.env.local` va `VITE_API_URL`. Sin esa variable no hay chat ni RAG. El backend es Python en Lambda (`requirements.txt`). Corpus: `data/README.md`.
+
+Las rutas del API (equivalente a `/docs` de FastAPI): https://j9zrekl9g4.execute-api.us-east-1.amazonaws.com/docs  
+Spec: https://j9zrekl9g4.execute-api.us-east-1.amazonaws.com/openapi.json
